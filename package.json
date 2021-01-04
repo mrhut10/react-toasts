@@ -1,23 +1,25 @@
 {
   "name": "@vashnak/react-toasts",
-  "version": "3.0.6",
+  "version": "4.0.0",
   "description": "Simple react alerter.",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "build": "webpack",
-    "lint": "tslint -p tsconfig.json",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run lint",
-    "preversion": "npm run lint",
-    "version": "git add -A src",
-    "postversion": "git push && git push --tags"
+    "build": "tsc -p .",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Vashnak/react-toasts.git"
   },
   "author": "Vashnak <anthony.sarais@gmail.com>",
+  "contributors": [
+    {
+      "name": "Alistair Hutten",
+      "email": "ahut10@gmail.com",
+      "url": "https://twitter.com/ahut10"
+    }
+  ],
   "license": "ISC",
   "keywords": [
     "react",
@@ -39,28 +41,24 @@
   "files": [
     "/lib"
   ],
-  "dependencies": {
-    "watchable-stores": "^2.0.2"
-  },
+  "dependencies": {},
   "peerDependencies": {
-    "@types/react": "^16.8.2",
-    "@types/react-dom": "^16.8.2"
+    "react": ">=16.0.0",
+    "react-dom": "^16.0.0"
   },
   "devDependencies": {
-    "@types/react": "^16.9.5",
-    "@types/react-dom": "^16.9.1",
-    "awesome-typescript-loader": "^5.2.1",
-    "css-loader": "^2.1.0",
-    "import": "0.0.6",
-    "prop-types": "^15.7.1",
-    "react": "^16.8.1",
-    "react-dom": "^16.8.1",
-    "style-loader": "^0.23.1",
-    "tslint": "^5.12.1",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.3.3",
-    "watchable-stores": "^2.0.2",
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.2.3"
+    "@types/babel__core": "^7.1.12",
+    "@types/node": "^14.14.19",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "typescript": "^4.1.3"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   }
 }
