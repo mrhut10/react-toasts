@@ -1,22 +1,16 @@
-import * as React from "react";
-import { Component } from "react";
-import * as ReactDOM from "react-dom";
-import { WatchableStore } from "watchable-stores";
-import { DarkColors, LightColors } from "./DefaultColors";
-import { IToastsStore } from "./ToastsStore";
-
-export enum ToastsContainerPosition {
-  BOTTOM_CENTER = "bottom_center",
-  BOTTOM_LEFT = "bottom_left",
-  BOTTOM_RIGHT = "bottom_right",
-  TOP_CENTER = "top_center",
-  TOP_LEFT = "top_left",
-  TOP_RIGHT = "top_right",
-}
+import React from "react";
+import ReactDOM from "react-dom";
+import {
+  DarkColors,
+  LightColors,
+  ToastStyleByPositionLookup,
+  ToastsContainerPosition,
+} from "./DefaultConfiguration";
+import { ToastStore, IToastsStore } from "./ToastsStore";
 
 export interface IToastsContainerProps {
   position: ToastsContainerPosition;
-  store: WatchableStore<IToastsStore>;
+  store: React.MutableRefObject<ToastStore>;
   lightBackground?: boolean;
   className?: string | string[];
 }
@@ -26,96 +20,68 @@ export interface IToastsContainerState {
   toasts: any[];
 }
 
-export class ToastsContainer extends Component<IToastsContainerProps, IToastsContainerState> {
-  private storeSubscriptionId: number;
-  private timeoutArray: number[];
+// hook which will take an event with a ttl
+const useEventWithTTL = <T extends any = any>() => {
+  const [eventStore, setEventStore] = React.useState<
+    Array<{ event: T; timer: number }>
+  >([]);
 
-  constructor(props: IToastsContainerProps) {
-    super(props);
-
-    this.state = {
-      styles: {},
-      toasts: [],
+  React.useEffect(() => {
+    return () => {
+      eventStore.forEach((row) => clearTimeout(row.timer));
+      setEventStore([]);
     };
+  });
 
-    this.storeSubscriptionId = -1;
-    this.timeoutArray = [];
-  }
+  const removeEvent = (event: T) =>
+    void setEventStore(eventStore.filter((row) => row.event !== event));
 
-  public componentDidMount() {
-    this.storeSubscriptionId = this.props.store.watch((data) => {
-      const toast = { ...data, id: Math.random() };
-      this.setState({ toasts: [toast].concat(this.state.toasts) });
-      this.timeoutArray.push(setTimeout(() => {
-        this.setState({ toasts: this.state.toasts.filter((t) => t.id !== toast.id) });
-      }, data.timer || 3000));
-    });
+  const addEvent = (event: T, timeout: number) => {
+    const item = { event, timer: setTimeout(removeEvent, timeout, event) };
+    setEventStore([...eventStore, item]);
+  };
+  return {
+    addEvent,
+    currentEvents: eventStore.map((row) => row.event),
+  };
+};
 
-    const styles: any = {};
-    switch (this.props.position) {
-      case ToastsContainerPosition.TOP_LEFT:
-        styles.top = 10;
-        styles.left = 10;
-        break;
-      case ToastsContainerPosition.TOP_RIGHT:
-        styles.top = 10;
-        styles.right = 10;
-        break;
-      case ToastsContainerPosition.TOP_CENTER:
-        styles.top = 10;
-        styles.left = "50%";
-        styles.transform = "translateX(-50%)";
-        break;
-      case ToastsContainerPosition.BOTTOM_LEFT:
-        styles.bottom = 10;
-        styles.left = 10;
-        break;
-      case ToastsContainerPosition.BOTTOM_RIGHT:
-        styles.bottom = 10;
-        styles.right = 10;
-        break;
-      case ToastsContainerPosition.BOTTOM_CENTER:
-        styles.bottom = 10;
-        styles.left = "50%";
-        styles.transform = "translateX(-50%)";
-        break;
-      default:
-        styles.bottom = 10;
-        styles.right = 10;
-        break;
-    }
-    this.setState({ styles });
-  }
+export const ToastsContainer = ({
+  position = ToastsContainerPosition.TOP_CENTER,
+  store = React.useRef(new ToastStore()),
+  className = "",
+  lightBackground = false,
+}: IToastsContainerProps) => {
+  const { addEvent, currentEvents } = useEventWithTTL<IToastsStore>();
 
-  public componentWillUnmount() {
-    this.props.store.unwatch(this.storeSubscriptionId);
-    this.timeoutArray.forEach(clearTimeout);
-  }
+  const toastStore = store.current;
 
-  public render() {
-    return ReactDOM.createPortal(
-      this._renderContainer(),
-      document.body,
-    );
-  }
+  React.useEffect(() => {
+    const newEventHandler = (event: IToastsStore) =>
+      addEvent(event, event.timer);
 
-  private _renderContainer() {
-    const style = this.props.lightBackground ? LightColors : DarkColors;
-    return (
-      <div style={this.state.styles}
-           className={"toasts-container " + (this.props.className || "")}>
-        {
-          this.state.toasts.map((toast) => {
-            return (
-              <div key={toast.id}
-                   className={"toast toast-" + toast.status + " " + toast.classNames}
-                   style={style[toast.status]}>
-                {toast.message}
-              </div>
-            );
-          })
-        }
-      </div>
-    );
-  }
-}
+    toastStore.subscribe(newEventHandler);
+
+    return () => {
+      // slightly irelivant as the toastStore would be destroyed after component gets unmounted
+      toastStore.unsubscribe(newEventHandler);
+    };
+  }, [toastStore]);
+
+  const style = ToastStyleByPositionLookup[position];
+  const theme = lightBackground ? LightColors : DarkColors;
+  const container = (
+    <div style={style} className={"toast-container " + className}>
+      {currentEvents.map((toast) => (
+        <div
+          key={Math.random() * 1000000}
+          className={`toast toast-${toast.status} ${toast.classNames}`}
+          style={theme[toast.status]}
+        >
+          {toast.message}
+        </div>
+      ))}
+    </div>
+  );
+  return ReactDOM.createPortal(container, document.body);
+};
