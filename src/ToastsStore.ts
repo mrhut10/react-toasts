@@ -1,42 +1,30 @@
-import {WatchableStore} from "watchable-stores";
+import PubSubEvent from "./PubSubEvent";
+import { toastStatus } from "./DefaultConfiguration";
 
 export interface IToastsStore {
-    status: string;
-    message: string | HTMLElement;
-    timer: number;
-    classNames: string[] | string;
+  status: toastStatus;
+  message: string | React.ReactNode;
+  timer: number;
+  classNames: string[] | string;
 }
 
-export class Store extends WatchableStore<IToastsStore> {
-    constructor() {
-        super({status: "", message: "", timer: 0, classNames: ""});
-    }
+export const partialApply = <A extends unknown[], B extends unknown[], O>(
+  func: (...args: [...A, ...B]) => O,
+  ...argsA: A
+) => (...argsB: B) => func(...argsA, ...argsB);
 
-    public success(message: string | HTMLElement, timer?: number, classNames?: string | string[]): void {
-        this._toast("success", message, timer, classNames);
-    }
+export class ToastStore extends PubSubEvent<IToastsStore> {
+  private _toast(
+    status: toastStatus,
+    message: React.ReactNode,
+    timer: number = 3000,
+    classNames: string | string[] = ""
+  ) {
+    this.omit({ status, message, timer, classNames });
+  }
 
-    public info(message: string | HTMLElement, timer?: number, classNames?: string | string[]): void {
-        this._toast("info", message, timer, classNames);
-    }
-
-    public warning(message: string | HTMLElement, timer?: number, classNames?: string | string[]): void {
-        this._toast("warning", message, timer, classNames);
-    }
-
-    public error(message: string | HTMLElement, timer?: number, classNames?: string | string[]): void {
-        this._toast("error", message, timer, classNames);
-    }
-
-    private _toast(status: string, message: string | HTMLElement,
-                   timer?: number, classNames?: string | string[]): void {
-        this.data = {
-            classNames: classNames || "",
-            message,
-            status,
-            timer: timer || 3000,
-        };
-    }
+  readonly success = partialApply(this._toast, "success");
+  readonly info = partialApply(this._toast, "info");
+  readonly warning = partialApply(this._toast, "warning");
+  readonly error = partialApply(this._toast, "error");
 }
-
-export const ToastsStore = new Store();
